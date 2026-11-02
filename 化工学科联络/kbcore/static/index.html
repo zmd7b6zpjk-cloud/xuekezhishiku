@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f2eee5">
+<title>化工学科联络 · 本地知识库</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d5a7a'/%3E%3Ctext x='32' y='45' font-size='36' text-anchor='middle' fill='%23fffdf8' font-family='serif'%3E化%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" media="print" onload="this.media='all'" onerror="this.remove()">
+</head>
+<body>
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="btn-menu" title="打开侧栏" aria-label="打开侧栏">☰</button>
+  <a class="brand" href="/">
+    <span class="brand-mark">化</span>
+    <span class="brand-text"><strong>化工学科联络</strong><small>本地知识库</small></span>
+  </a>
+  <div class="search">
+    <svg class="search-icon" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <input id="search" type="search" autocomplete="off" spellcheck="false"
+           placeholder="搜索标题、正文、标签…   支持 #标签  @学科">
+    <kbd>Ctrl K</kbd>
+  </div>
+  <div class="top-actions">
+    <button class="btn ghost" id="btn-graph" title="查看学科之间的联系">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="6" cy="7" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="9" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="11" cy="18" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 8.5 15.8 9M7.6 9.2l2.5 6.6M16.8 11.2l-4.2 5" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span class="btn-label">联络图谱</span>
+    </button>
+    <button class="btn primary" id="btn-new">＋ <span class="btn-label">新建卡片</span></button>
+    <button class="icon-btn" id="btn-theme" title="切换深浅色" aria-label="切换深浅色">◐</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <aside class="sidebar" id="sidebar">
+    <section class="capture">
+      <div class="panel-title"><span>快速记录</span><span class="hint">Ctrl + Enter</span></div>
+      <textarea id="quick" rows="2" placeholder="一句话记下灵感，稍后再整理成卡片…"></textarea>
+      <div class="capture-foot">
+        <select id="quick-discipline" aria-label="选择学科"></select>
+        <button class="btn small" id="btn-quick">存入</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>学科</span><button class="link tiny" id="btn-all">全部</button></div>
+      <ul class="nav-list" id="disciplines"></ul>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>标签</span><span class="hint" id="tag-count"></span></div>
+      <div class="tag-cloud" id="tags"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>收件箱</span><span class="badge" id="inbox-count">0</span></div>
+      <p class="panel-note">把 <code>.md</code> / <code>.txt</code> 文件放进项目里的 <code>inbox/</code> 文件夹，再点下面导入。</p>
+      <button class="btn small ghost" id="btn-ingest">导入收件箱</button>
+    </section>
+
+    <footer class="sidebar-foot">
+      <div id="stat-line" class="hint">正在读取…</div>
+      <div class="foot-links">
+        <button class="link tiny" id="btn-export">导出备份</button>
+        <span class="dot">·</span>
+        <a class="link tiny" href="/api/health" target="_blank" rel="noopener">接口状态</a>
+      </div>
+    </footer>
+  </aside>
+
+  <section class="list-pane" id="list-pane">
+    <div class="list-head">
+      <div>
+        <h2 id="list-title">全部卡片</h2>
+        <div id="list-sub" class="hint"></div>
+      </div>
+      <button class="link tiny" id="btn-clear-filter" hidden>清除筛选</button>
+    </div>
+    <ul class="card-list" id="cards"></ul>
+  </section>
+
+  <section class="reader" id="reader" aria-live="polite"></section>
+</main>
+
+<!-- 编辑器 -->
+<div class="overlay" id="editor-overlay" hidden>
+  <form class="editor" id="editor" autocomplete="off">
+    <header class="editor-head">
+      <div>
+        <h2 id="editor-heading">新建卡片</h2>
+        <p class="hint" id="editor-path">保存后写入 vault/ 目录，可用 Obsidian 直接编辑</p>
+      </div>
+      <div class="editor-actions">
+        <button type="button" class="btn ghost" id="btn-cancel">取消</button>
+        <button type="submit" class="btn primary" id="btn-save">保存</button>
+      </div>
+    </header>
+    <div class="editor-fields">
+      <label class="field grow">标题
+        <input id="f-title" required maxlength="120" placeholder="例如：精馏塔与 McCabe-Thiele 图解法">
+      </label>
+      <label class="field">学科
+        <input id="f-discipline" list="discipline-options" maxlength="20" placeholder="化学工程">
+      </label>
+      <label class="field">标签
+        <input id="f-tags" placeholder="分离工程, 相平衡">
+      </label>
+    </div>
+    <datalist id="discipline-options"></datalist>
+    <div class="editor-split">
+      <div class="edit-pane">
+        <div class="pane-bar"><span>Markdown / LaTeX</span><span class="hint">[[双链]] · #标签 · $公式$</span></div>
+        <textarea id="f-body" spellcheck="false" placeholder="写下概念、公式、推导与你的理解…&#10;&#10;用 [[卡片标题]] 建立与其他学科的联系。"></textarea>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-bar"><span>预览</span></div>
+        <article class="markdown" id="f-preview"></article>
+      </div>
+    </div>
+    <footer class="editor-foot">
+      <span class="hint" id="editor-hint">可以直接粘贴截图，自动上传为图片</span>
+      <button type="button" class="link danger" id="btn-delete" hidden>删除这张卡片</button>
+    </footer>
+  </form>
+</div>
+
+<!-- 联络图谱 -->
+<div class="overlay graph-overlay" id="graph-overlay" hidden>
+  <div class="graph-frame">
+    <header class="graph-head">
+      <div>
+        <h2>联络图谱</h2>
+        <p class="hint" id="graph-sub"></p>
+      </div>
+      <div class="editor-actions">
+        <button class="btn ghost" id="btn-graph-reset">重置布局</button>
+        <button class="btn primary" id="btn-graph-close">关闭</button>
+      </div>
+    </header>
+    <div class="graph-stage" id="graph-stage">
+      <canvas id="graph-canvas"></canvas>
+      <div class="graph-tip" id="graph-tip" hidden></div>
+      <div class="graph-legend" id="graph-legend"></div>
+      <p class="graph-help">拖动节点调整位置 · 滚轮缩放 · 点击卡片打开 · 虚线节点是「待创建」的卡片</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" defer onerror="this.remove()"></script>
+<script src="/static/markdown.js"></script>
+<script src="/static/graph.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
